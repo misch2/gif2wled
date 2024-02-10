@@ -57,7 +57,7 @@ const requestListener = function (req, res) {
     // bail out if file or duration is not specified
     if (!basename || !duration || !fps) {
         console.log("No gif specified");
-        res.writeHead(200, { "Content-Type": "application/json" });
+        res.writeHead(400, { "Content-Type": "application/json" });
         res.end(
             JSON.stringify({
                 status: "Fail",
@@ -71,7 +71,7 @@ const requestListener = function (req, res) {
     // error out if basename contains forbidden characters
     if (basename.match(/[^a-zA-Z0-9\.\-_]/)) {
         console.log("Invalid gif specified");
-        res.writeHead(200, { "Content-Type": "application/json" });
+        res.writeHead(400, { "Content-Type": "application/json" });
         res.end(
             JSON.stringify({
                 status: "Fail",
@@ -85,7 +85,7 @@ const requestListener = function (req, res) {
     const file = "gifs/" + basename + ".gif";
     if (!fs.existsSync(file)) {
         console.log("File " + file + " does not exist");
-        res.writeHead(200, { "Content-Type": "application/json" });
+        res.writeHead(400, { "Content-Type": "application/json" });
         res.end(
             JSON.stringify({
                 status: "Fail",
