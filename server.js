@@ -4,20 +4,29 @@ const fs = require("fs");
 
 const listenhost = process.env.LISTEN_HOST || "localhost";
 const listenport = process.env.LISTEN_PORT || 8000;
-const wled_host = process.env.WLED_HOST;
+const wled_host = process.env.WLED_HOST || "localhost";
+const wled_port = 5568; // WLED E1.31 port
 
 var currentGif;
 var currentTimeout;
 
+// WLED uses 510 channels per universe (170 LEDs), i.e. no LED is shared between universes
+function mapping_wled(sourceX, sourceY, width, height) {
+    var channelNumber = sourceX * 3 + sourceY * width * 3 + 1;
+    return {
+        universe: Math.floor(channelNumber / 510) + 1,
+        channel: channelNumber % 510,
+    };
+}
+
 function playGifForSpecifiedTime(duration, filename, fps = 25) {
     var options = {
-        port: 5568,
+        port: wled_port,
         host: wled_host,
     };
 
     console.log("Loading gif from " + filename);
     var buf = fs.readFileSync(filename);
-    var mappingFunction = AnimatedGif2E131.mapping.snake;
 
     if (currentTimeout) {
         console.log("Clearing previous timeout");
@@ -33,7 +42,8 @@ function playGifForSpecifiedTime(duration, filename, fps = 25) {
             console.log("Error disconnecting from E131 server: " + e);
         }
     }
-    currentGif = new AnimatedGif2E131(buf, options, mappingFunction);
+    currentGif = new AnimatedGif2E131(buf, options, mapping_wled);
+    currentGif.send(); // fix to send the first frame immediately instead of waiting for the first timeout (which may be too long for the first frame to be displayed if fps is set to a low value like 0.5)
     currentGif.startAnimation(fps);
 
     currentTimeout = setTimeout(() => {
@@ -50,19 +60,19 @@ function playGifForSpecifiedTime(duration, filename, fps = 25) {
 const requestListener = function (req, res) {
     // play gif if "/play" is called with parameters "f" (for "file"), "d" (for "duration") and "s" (for "frames per second")
     const url = new URL(req.url, `http://${req.headers.host}`);
-    const basename = url.searchParams.get("f");
-    const duration = url.searchParams.get("d");
-    const fps = url.searchParams.get("s");
+    const basename = url.searchParams.get("gif");
+    const duration_seconds = url.searchParams.get("len");
+    const fps = url.searchParams.get("fps");
 
     // bail out if file or duration is not specified
-    if (!basename || !duration || !fps) {
+    if (!basename || !duration_seconds || !fps) {
         console.log("No gif specified");
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(
             JSON.stringify({
                 status: "Fail",
                 message:
-                    "No gif + duration + fps specified. Use /play?f=<filename>&d=<duration>&s=<fps>",
+                    "No gif + duration + fps specified. Use /play?gif=<filename>&len=<duration>&fps=<fps>",
             })
         );
         return;
@@ -96,10 +106,16 @@ const requestListener = function (req, res) {
     }
 
     console.log(
-        "Playing gif " + file + " for " + duration + "ms with " + fps + "fps"
+        "Playing gif " +
+            file +
+            " for " +
+            duration_seconds +
+            "s with " +
+            fps +
+            "fps"
     );
     try {
-        playGifForSpecifiedTime(duration, file, fps);
+        playGifForSpecifiedTime(duration * 1000, file, fps);
     } catch (e) {
         console.log("Error playing gif: " + e);
         res.writeHead(500, { "Content-Type": "application/json" });
@@ -121,7 +137,7 @@ server.listen(listenport, listenhost, () => {
     console.log(`Server is running on http://${listenhost}:${listenport}`);
 });
 
-// playGifForSpecifiedTime(5000, "fire16x16.gif");
+playGifForSpecifiedTime(5000, "gifs/test_pattern.gif", 0.5);
 // setTimeout(() => {
 //     playGifForSpecifiedTime(5000, "test3.gif");
 // }, 3000);
