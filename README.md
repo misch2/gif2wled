@@ -16,7 +16,7 @@ then
 ```
 curl 'http://localhost:8000/play?len=2&gif=test_pattern&fps=1'
 ```
-A test pattern should be displayed for 2 seconds
+A test pattern should be displayed for 2 seconds. This can be used to verify correctnes of the mapping function for the given display orientation.
 
 # Adding GIFs
 
