@@ -2,6 +2,11 @@
 
 A simple way to display animated GIFs on WLED matrix.
 
+Advantages of this method over defining those animations directly via WLED:
+ 1. Easy to use: no need to split the GIF into individual frames and then convert them to WLED-compatible bitmap definitions
+ 2. No need to save/restore WLED state when displaying an animation only temporarily. WLED with E1.31 does this automatically
+ 3. Play complex animations without cluttering the WLED presets or playlists with too many items
+
 # Installation
 ```
 npm i
