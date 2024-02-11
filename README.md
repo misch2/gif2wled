@@ -2,17 +2,26 @@
 
 A simple way to display animated GIFs on WLED matrix.
 
-Usage:
+# Installation
+```
+npm i
+WLED_HOST=1.2.3.4 node server.js 
+```
+then
+```
+curl 'http://localhost:8000/play?len=2&gif=test_pattern&fps=1'
+```
+A test pattern should be displayed for 2 seconds
 
 # HomeAssistant
 
-`configuration.yaml`:
+configuration.yaml:
 ```
 ...
 rest_command: !include rest_command.yaml
 ```
 
-`rest_command.yaml`:
+rest_command.yaml:
 ```
 wled_matrix_play_animation:
   method: get
@@ -21,7 +30,7 @@ wled_matrix_play_animation:
 
 ## Sample automation action
 
-Plays a `doorbell_animated` GIF for 20 seconds with 0.5 second per frame:
+Plays a "doorbell_animated" GIF for 20 seconds with 0.5 second per frame:
 ```
 service: rest_command.wled_matrix_play_animation
 data:
