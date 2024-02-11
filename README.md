@@ -13,6 +13,10 @@ curl 'http://localhost:8000/play?len=2&gif=test_pattern&fps=1'
 ```
 A test pattern should be displayed for 2 seconds
 
+# Adding GIFs
+
+Just put them into the "gifs/" subfolder.
+
 # HomeAssistant
 
 configuration.yaml:
