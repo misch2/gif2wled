@@ -36,6 +36,7 @@ wled_matrix_play_animation:
   method: get
   url: http://xxxxx:8000/play?gif={{ file }}&len={{ duration }}&fps={{ fps }}
 ```
+where "xxxxx:8000" is address of the nodejs server.
 
 ## Sample automation action
 
@@ -51,7 +52,7 @@ data:
 
 # Example systemd unit file
 
-Service listening on port 8000:
+Service listening on port 8000 with WLED host on address 1.2.3.4:
 
 ```
 # /etc/systemd/system/michals-gif2wled.service
