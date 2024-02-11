@@ -115,7 +115,7 @@ const requestListener = function (req, res) {
             "fps"
     );
     try {
-        playGifForSpecifiedTime(duration * 1000, file, fps);
+        playGifForSpecifiedTime(duration_seconds * 1000, file, fps);
     } catch (e) {
         console.log("Error playing gif: " + e);
         res.writeHead(500, { "Content-Type": "application/json" });
