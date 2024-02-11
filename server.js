@@ -137,7 +137,7 @@ server.listen(listenport, listenhost, () => {
     console.log(`Server is running on http://${listenhost}:${listenport}`);
 });
 
-playGifForSpecifiedTime(5000, "gifs/test_pattern.gif", 0.5);
+// playGifForSpecifiedTime(5000, "gifs/test_pattern.gif", 0.5);
 // setTimeout(() => {
 //     playGifForSpecifiedTime(5000, "test3.gif");
 // }, 3000);
