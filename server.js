@@ -4,10 +4,10 @@ const fs = require("fs");
 
 const listenhost = process.env.LISTEN_HOST || "localhost";
 const listenport = process.env.LISTEN_PORT || 8000;
-const wled_port = 5568; // WLED E1.31 port
+const e131_port = 5568; // WLED E1.31 port
 
-var currentGif;
-var currentTimeout;
+var instance_id = 0;
+var currentHostData = {};
 
 // WLED uses 510 channels per universe (170 LEDs), i.e. no LED is shared between universes
 function mapping_wled(sourceX, sourceY, width, height) {
@@ -18,42 +18,84 @@ function mapping_wled(sourceX, sourceY, width, height) {
     };
 }
 
-function playGifForSpecifiedTime(duration, filename, fps = 25, wled_host) {
+function playGifForSpecifiedTime(duration, filename, fps = 25, e131_host) {
     var options = {
-        port: wled_port,
-        host: wled_host,
+        port: e131_port,
+        host: e131_host,
     };
 
-    console.log("Loading gif from " + filename);
+    var id = instance_id++;
+    var data = currentHostData[e131_host];
+    if (!data) {
+        data = {
+            gif: null,
+            timeout: null,
+            id: id,
+        };
+        currentHostData[e131_host] = data;
+    }
+
+    console.log("[#" + id + "] " + "Loading gif from " + filename);
     var buf = fs.readFileSync(filename);
 
-    if (currentTimeout) {
-        console.log("Clearing previous timeout");
-        clearTimeout(currentTimeout);
+    if (data["timeout"]) {
+        console.log(
+            "[#" +
+                id +
+                "] " +
+                "Clearing previous timeout for host " +
+                e131_host +
+                " (#" +
+                data["id"] +
+                ")"
+        );
+        clearTimeout(data["timeout"]);
     }
 
-    if (currentGif) {
-        console.log("Stopping previous gif animation.");
-        currentGif.stopAnimation();
+    if (data["gif"]) {
+        console.log(
+            "[#" +
+                id +
+                "] " +
+                "Stopping previous gif animation" +
+                " (#" +
+                data["id"] +
+                ")"
+        );
+        data["gif"].stopAnimation();
         try {
-            currentGif.output.close(() => {}); // disconnect from the E131 server explicitly
+            data["gif"].output.close(() => {}); // disconnect from the E131 server explicitly
         } catch (e) {
-            console.log("Error disconnecting from E131 server " + wled_host + ": " + e);
+            console.log(
+                "[#" +
+                    id +
+                    "] " +
+                    "Error disconnecting from E131 server " +
+                    e131_host +
+                    ": " +
+                    e
+            );
         }
     }
-    currentGif = new AnimatedGif2E131(buf, options, mapping_wled);
-    currentGif.send(); // fix to send the first frame immediately instead of waiting for the first timeout (which may be too long for the first frame to be displayed if fps is set to a low value like 0.5)
-    currentGif.startAnimation(fps);
+    data["id"] = id;
+    data["gif"] = new AnimatedGif2E131(buf, options, mapping_wled);
+    data["gif"].send(); // fix to send the first frame immediately instead of waiting for the first timeout (which may be too long for the first frame to be displayed if fps is set to a low value like 0.5)
+    data["gif"].startAnimation(fps);
 
-    currentTimeout = setTimeout(() => {
-        currentGif.stopAnimation();
+    data["timeout"] = setTimeout(() => {
+        data["gif"].stopAnimation();
         try {
-            currentGif.output.close(() => {}); // disconnect from the E131 server explicitly
+            data["gif"].output.close(() => {}); // disconnect from the E131 server explicitly
+            data["gif"] = null;
         } catch (e) {
-            console.log("Error disconnecting from E131 server: " + e);
+            console.log(
+                "[#" + id + "] " + "Error disconnecting from E131 server: " + e
+            );
         }
+        console.log("[#" + id + "] " + "stopped playing gif");
+        data["timeout"] = null;
     }, duration);
-    console.log("Playing gif for " + duration + "ms");
+    console.log("[#" + id + "] " + "Playing gif for " + duration + "ms");
 }
 
 const requestListener = function (req, res) {
@@ -62,10 +104,10 @@ const requestListener = function (req, res) {
     const basename = url.searchParams.get("gif");
     const duration_seconds = url.searchParams.get("len");
     const fps = url.searchParams.get("fps");
-    const wled_host = url.searchParams.get("host");
+    const e131_host = url.searchParams.get("host");
 
     // bail out if file or duration is not specified
-    if (!basename || !duration_seconds || !fps || !wled_host) {
+    if (!basename || !duration_seconds || !fps || !e131_host) {
         console.log("No gif specified");
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(
@@ -109,7 +151,7 @@ const requestListener = function (req, res) {
         "Playing gif " +
             file +
             " on " +
-            wled_host +
+            e131_host +
             " for " +
             duration_seconds +
             "s at " +
@@ -117,7 +159,7 @@ const requestListener = function (req, res) {
             "fps"
     );
     try {
-        playGifForSpecifiedTime(duration_seconds * 1000, file, fps, wled_host);
+        playGifForSpecifiedTime(duration_seconds * 1000, file, fps, e131_host);
     } catch (e) {
         console.log("Error playing gif: " + e);
         res.writeHead(500, { "Content-Type": "application/json" });
@@ -129,12 +171,16 @@ const requestListener = function (req, res) {
         );
         return;
     }
+
     // confirm with a JSON "OK" response
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ status: "OK" }));
 };
 
-const server = http.createServer(requestListener);
+const server = http.createServer(); // requestListener);
+server.on("request", async (req, res) => {
+    requestListener(req, res);
+});
 server.listen(listenport, listenhost, () => {
     console.log(`Server is running on http://${listenhost}:${listenport}`);
 });
