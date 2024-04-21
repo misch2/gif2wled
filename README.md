@@ -2,6 +2,11 @@
 
 A simple way to display animated GIFs on WLED matrix.
 
+Advantages of this method over defining those animations directly via WLED:
+ 1. Easy to use: no need to split the GIF into individual frames and then convert them to WLED-compatible bitmap definitions
+ 2. No need to save/restore WLED state when displaying an animation only temporarily. WLED with E1.31 does this automatically
+ 3. Play complex animations without cluttering the WLED presets or playlists with too many items
+
 # Installation
 ```
 npm i
@@ -11,7 +16,7 @@ then
 ```
 curl 'http://localhost:8000/play?len=2&gif=test_pattern&fps=1'
 ```
-A test pattern should be displayed for 2 seconds
+A test pattern should be displayed for 2 seconds. This can be used to verify correctnes of the mapping function for the given display orientation.
 
 # Adding GIFs
 
@@ -31,6 +36,7 @@ wled_matrix_play_animation:
   method: get
   url: http://xxxxx:8000/play?gif={{ file }}&len={{ duration }}&fps={{ fps }}
 ```
+where "xxxxx:8000" is address of the nodejs server.
 
 ## Sample automation action
 
@@ -46,7 +52,7 @@ data:
 
 # Example systemd unit file
 
-Service listening on port 8000:
+Service listening on port 8000 with WLED host on address 1.2.3.4:
 
 ```
 # /etc/systemd/system/michals-gif2wled.service
