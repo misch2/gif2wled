@@ -4,7 +4,6 @@ const fs = require("fs");
 
 const listenhost = process.env.LISTEN_HOST || "localhost";
 const listenport = process.env.LISTEN_PORT || 8000;
-const wled_host = process.env.WLED_HOST || "localhost";
 const wled_port = 5568; // WLED E1.31 port
 
 var currentGif;
@@ -19,7 +18,7 @@ function mapping_wled(sourceX, sourceY, width, height) {
     };
 }
 
-function playGifForSpecifiedTime(duration, filename, fps = 25) {
+function playGifForSpecifiedTime(duration, filename, fps = 25, wled_host) {
     var options = {
         port: wled_port,
         host: wled_host,
@@ -39,7 +38,7 @@ function playGifForSpecifiedTime(duration, filename, fps = 25) {
         try {
             currentGif.output.close(() => {}); // disconnect from the E131 server explicitly
         } catch (e) {
-            console.log("Error disconnecting from E131 server: " + e);
+            console.log("Error disconnecting from E131 server " + wled_host + ": " + e);
         }
     }
     currentGif = new AnimatedGif2E131(buf, options, mapping_wled);
@@ -63,16 +62,17 @@ const requestListener = function (req, res) {
     const basename = url.searchParams.get("gif");
     const duration_seconds = url.searchParams.get("len");
     const fps = url.searchParams.get("fps");
+    const wled_host = url.searchParams.get("host");
 
     // bail out if file or duration is not specified
-    if (!basename || !duration_seconds || !fps) {
+    if (!basename || !duration_seconds || !fps || !wled_host) {
         console.log("No gif specified");
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(
             JSON.stringify({
                 status: "Fail",
                 message:
-                    "No gif + duration + fps specified. Use /play?gif=<filename>&len=<duration>&fps=<fps>",
+                    "No gif + len + fps + host specified. Use /play?gif=<filename>&len=<duration>&fps=<fps>&host=<host>",
             })
         );
         return;
@@ -108,14 +108,16 @@ const requestListener = function (req, res) {
     console.log(
         "Playing gif " +
             file +
+            " on " +
+            wled_host +
             " for " +
             duration_seconds +
-            "s with " +
+            "s at " +
             fps +
             "fps"
     );
     try {
-        playGifForSpecifiedTime(duration_seconds * 1000, file, fps);
+        playGifForSpecifiedTime(duration_seconds * 1000, file, fps, wled_host);
     } catch (e) {
         console.log("Error playing gif: " + e);
         res.writeHead(500, { "Content-Type": "application/json" });
