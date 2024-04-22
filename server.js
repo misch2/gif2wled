@@ -39,42 +39,17 @@ function playGifForSpecifiedTime(duration, filename, fps = 25, e131_host) {
     var buf = fs.readFileSync(filename);
 
     if (data["timeout"]) {
-        console.log(
-            "[#" +
-                id +
-                "] " +
-                "Clearing previous timeout for host " +
-                e131_host +
-                " (#" +
-                data["id"] +
-                ")"
-        );
+        console.log("[#" + id + "] " + "Clearing previous timeout for host " + e131_host + " (#" + data["id"] + ")");
         clearTimeout(data["timeout"]);
     }
 
     if (data["gif"]) {
-        console.log(
-            "[#" +
-                id +
-                "] " +
-                "Stopping previous gif animation" +
-                " (#" +
-                data["id"] +
-                ")"
-        );
+        console.log("[#" + id + "] " + "Stopping previous gif animation" + " (#" + data["id"] + ")");
         data["gif"].stopAnimation();
         try {
-            data["gif"].output.close(() => {}); // disconnect from the E131 server explicitly
+            data["gif"].output.close(() => { }); // disconnect from the E131 server explicitly
         } catch (e) {
-            console.log(
-                "[#" +
-                    id +
-                    "] " +
-                    "Error disconnecting from E131 server " +
-                    e131_host +
-                    ": " +
-                    e
-            );
+            console.log("[#" + id + "] " + "Error disconnecting from E131 server " + e131_host + ":  +                e            );
         }
     }
     data["id"] = id;
@@ -85,12 +60,10 @@ function playGifForSpecifiedTime(duration, filename, fps = 25, e131_host) {
     data["timeout"] = setTimeout(() => {
         data["gif"].stopAnimation();
         try {
-            data["gif"].output.close(() => {}); // disconnect from the E131 server explicitly
+            data["gif"].output.close(() => { }); // disconnect from the E131 server explicitly
             data["gif"] = null;
         } catch (e) {
-            console.log(
-                "[#" + id + "] " + "Error disconnecting from E131 server: " + e
-            );
+            console.log("[#" + id + "] " + "Error disconnecting from E131 server: " + e);
         }
         console.log("[#" + id + "] " + "stopped playing gif");
         data["timeout"] = null;
@@ -147,17 +120,7 @@ const requestListener = function (req, res) {
         return;
     }
 
-    console.log(
-        "Playing gif " +
-            file +
-            " on " +
-            e131_host +
-            " for " +
-            duration_seconds +
-            "s at " +
-            fps +
-            "fps"
-    );
+    console.log("Playing gif " + file + " on " + e131_host + " for " + duration_seconds + "s at " + fps + "fps");
     try {
         playGifForSpecifiedTime(duration_seconds * 1000, file, fps, e131_host);
     } catch (e) {
