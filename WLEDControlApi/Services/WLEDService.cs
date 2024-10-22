@@ -1,16 +1,11 @@
 ﻿using WLEDControlApi.Interfaces;
 using System.Text.RegularExpressions;
 using System.Drawing;
-using System;
-using System.IO;
 using System.Drawing.Imaging;
-using System.Text.Json.Serialization;
-using Newtonsoft.Json;
 using WLEDControlApi.Domain;
 using Haukcode.sACN;
 using Haukcode.sACN.Model;
 using System.Net;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace WLEDControlApi.Services
 {
@@ -56,24 +51,21 @@ namespace WLEDControlApi.Services
                 throw new ArgumentNullException("Missing E131 host");
             }
 
-            _logger.LogDebug("here 1");
             var gifFullPath = _config["Images:StoragePath"]?.TrimEnd('/') + "/" + gifBaseNameWithoutExtension + ".gif";
             if (!File.Exists(gifFullPath))
             {
-                _logger.LogWarning($"GIF '{gifBaseNameWithoutExtension}' not found at location: {gifFullPath}");
                 throw new FileNotFoundException($"GIF image '{gifBaseNameWithoutExtension}' not found in storage");
             }
 
             _logger.LogInformation($"Playing GIF {gifBaseNameWithoutExtension} on {destinationHost} for {durationInSeconds} seconds at {fps} fps");
 
             Image gifImg = Image.FromFile(gifFullPath);
-            _logger.LogDebug("here 4");
             FrameDimension dimension = new FrameDimension(gifImg.FrameDimensionsList[0]);
+            int frameCount = gifImg.GetFrameCount(dimension);
+            _logger.LogInformation($"Number of frames: {frameCount}, size: {gifImg.Width} x {gifImg.Height}");
 
-            _logger.LogDebug("here 5");
             var destinationHostIP = _dnsCacheService.GetIPAddress(destinationHost);
 
-            _logger.LogDebug("here 6");
             var sendClient = new SACNClient(
                 senderId: acnSourceId,
                 senderName: acnSourceName,
@@ -81,34 +73,21 @@ namespace WLEDControlApi.Services
                 port: _config.GetValue<int>("E131:Port")
                 );
 
-
             var startTime = DateTime.Now;
             while (DateTime.Now - startTime < TimeSpan.FromSeconds(durationInSeconds))
             {
-                // Number of frames
-                int frameCount = gifImg.GetFrameCount(dimension);
-                _logger.LogDebug("here 7");
-                _logger.LogInformation($"Number of frames: {frameCount}, size: {gifImg.Width} x {gifImg.Height}");
-                // Return an Image at a certain index
                 for (int index = 0; index < frameCount; index++)
                 {
                     gifImg.SelectActiveFrame(dimension, index);
 
-                    // get the frame content as RGB data
                     var frame = new Bitmap(gifImg.Width, gifImg.Height);
                     Graphics.FromImage(frame).DrawImage(gifImg, Point.Empty);
 
-                    ushort startingUniverseNumber = 1;
-                    var universes = MapBitmapToUniverses(frame, startingUniverseNumber);
-
-                    _logger.LogDebug("here 9");
-                    // send the frames
-                    foreach (var universe in universes)
+                    foreach (var universe in MapBitmapToUniverses(frame, 1))
                     {
                         sendClient.SendUnicast(destinationHostIP, universe.Number, universe.ChannelData);
                     }
 
-                    // wait for the next frame
                     Thread.Sleep((int)(1000 / fps));
                 }
             }

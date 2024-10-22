@@ -20,7 +20,7 @@ builder.Services.AddMemoryCache();
 
 // setup DI
 builder.Services.AddScoped<IWLEDService, WLEDService>();
-builder.Services.AddScoped<IChannelMapper, ChannelMapperWLED>();
+builder.Services.AddScoped<IChannelMapper, ChannelMapperWLEDSimple>();
 
 builder.Services.AddSingleton<IDNSCacheService>(sp => new DNSCacheService(sp.GetRequiredService<IMemoryCache>(), TimeSpan.FromMinutes(60)));
 
