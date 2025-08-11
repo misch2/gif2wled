@@ -1,6 +1,5 @@
 flask
 pillow
-request
 jsonify
 
 
