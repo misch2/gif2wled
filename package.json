@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "animatedgif2e131": "^0.0.4",
-    "fs": "^0.0.1-security",
-    "http": "^0.0.1-security"
-  }
-}
