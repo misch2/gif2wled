@@ -66,7 +66,7 @@ After=network-online.target
 WorkingDirectory={{ /home/foobar/gif2wled_e131 }}
 Environment="LISTEN_HOST=0.0.0.0"
 Environment="LISTEN_PORT=8000"
-ExecStart=/usr/bin/node server.js
+ExecStart={{ /home/foobar/venv/bin/python }} udp_realtime/server.py
 Type=simple
 Restart=always
 KillMode=control-group
