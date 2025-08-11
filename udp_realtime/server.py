@@ -15,11 +15,12 @@ WLED_REALTIME_PORT = 21324  # see https://kno.wled.ge/interfaces/udp-realtime/
 instance_id = 0
 currentHostData = {}
 
-
-def send_colors(clientSock, clientAddr, colors):
+def send_colors(clientSock, clientAddr, colors, fps):
     v = []
     v.append(2)  # DRGB protocol
-    v.append(2)  # seconds to wait after no packet is received
+
+    frame_duration = int(1 / fps)
+    v.append(max(int(frame_duration * 2), 1))  # seconds to wait after no packet is received
 
     # for color in colors:
     #     v.extend(color[0], color[1], color[2])
@@ -32,30 +33,18 @@ def send_colors(clientSock, clientAddr, colors):
 
 
 # Placeholder for handling GIF to E131 conversion.
-def send_frame_to_wled(frame_data, clientSock, clientAddr):
+def send_frame_to_wled(frame_data, fps, clientSock, clientAddr):
     # Implement the logic to send the frame to the E131 host
-    print(f"Sending frame data to {clientAddr[0]} on port {clientAddr[1]}")
-    send_colors(clientSock, clientAddr, frame_data)
+    # print(f"Sending frame data to {clientAddr[0]} on port {clientAddr[1]}")
+    send_colors(clientSock, clientAddr, frame_data, fps)
+    time.sleep(1 / fps)
 
 
 def play_gif_for_specified_time(duration, filename, fps, wled_host):
     global instance_id
-    options = {
-        "port": WLED_REALTIME_PORT,
-        "host": wled_host,
-    }
 
     id = instance_id
     instance_id += 1
-    data = currentHostData.get(
-        wled_host,
-        {
-            "gif": None,
-            "timeout": None,
-            "id": id,
-        },
-    )
-    currentHostData[wled_host] = data
 
     print(f"[#{id}] Loading GIF from {filename}")
 
@@ -73,13 +62,18 @@ def play_gif_for_specified_time(duration, filename, fps, wled_host):
     print(f"[#{id}] Playing gif for {duration / 1000}s")
 
     clientSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    clientAddr = (options["host"], options["port"])
+
+    # Convert the "wled_host" to IP and keep a cache for it
+    if wled_host not in currentHostData:
+        ip = socket.gethostbyname(wled_host)
+        currentHostData[wled_host] = {"ip": ip, "port": WLED_REALTIME_PORT}
+
+    clientAddr = (currentHostData[wled_host]["ip"], currentHostData[wled_host]["port"])
 
     while duration > 0:
         # Send each frame
         for frame_data in frames:
-            send_frame_to_wled(frame_data, clientSock, clientAddr)
-            time.sleep(1 / fps)
+            send_frame_to_wled(frame_data, fps, clientSock, clientAddr)
             duration -= 1000 / fps
 
     clientSock.close()
@@ -90,9 +84,9 @@ def play():
     basename = request.args.get("gif")
     duration_seconds = request.args.get("len")
     fps = request.args.get("fps")
-    e131_host = request.args.get("host")
+    wled_host = request.args.get("host")
 
-    if not basename or not duration_seconds or not fps or not e131_host:
+    if not basename or not duration_seconds or not fps or not wled_host:
         print("No gif specified")
         return (
             jsonify(
@@ -117,9 +111,9 @@ def play():
         )
 
     try:
-        print(f"Playing gif {file} on {e131_host} for {duration_seconds}s at {fps}fps")
+        print(f"Playing gif {file} on {wled_host} for {duration_seconds}s at {fps}fps")
         play_gif_for_specified_time(
-            float(duration_seconds) * 1000, file, float(fps), e131_host
+            float(duration_seconds) * 1000, file, float(fps), wled_host
         )
     except Exception as e:
         print(f"Error playing gif: {e}")
