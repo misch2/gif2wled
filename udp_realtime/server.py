@@ -123,4 +123,4 @@ def play():
 
 
 if __name__ == "__main__":
-    app.run(host=LISTEN_HOST, port=LISTEN_PORT)
+    app.run(host=LISTEN_HOST, port=LISTEN_PORT, threaded=True)
