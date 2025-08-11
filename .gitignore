@@ -1,2 +1,7 @@
 node_modules
-
+/.vs/
+/*.code-workspace
+/WledControlApi/bin
+/WledControlApi/obj
+/WLEDControlApi/publish
+/WLEDControlApi/WLEDControlApi.csproj.user
