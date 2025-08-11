@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+import threading
 from PIL import Image
 import os
 import io
@@ -15,12 +16,15 @@ WLED_REALTIME_PORT = 21324  # see https://kno.wled.ge/interfaces/udp-realtime/
 instance_id = 0
 currentHostData = {}
 
+
 def send_colors(clientSock, clientAddr, colors, fps):
     v = []
     v.append(2)  # DRGB protocol
 
     frame_duration = int(1 / fps)
-    v.append(max(int(frame_duration * 2), 1))  # seconds to wait after no packet is received
+    v.append(
+        max(int(frame_duration * 2), 1)
+    )  # seconds to wait after no packet is received
 
     # for color in colors:
     #     v.extend(color[0], color[1], color[2])
@@ -77,6 +81,7 @@ def play_gif_for_specified_time(duration, filename, fps, wled_host):
             duration -= 1000 / fps
 
     clientSock.close()
+    print(f"[#{id}] Playback ended for {filename}")
 
 
 @app.route("/play", methods=["GET"])
@@ -111,15 +116,23 @@ def play():
         )
 
     try:
-        print(f"Playing gif {file} on {wled_host} for {duration_seconds}s at {fps}fps")
-        play_gif_for_specified_time(
-            float(duration_seconds) * 1000, file, float(fps), wled_host
+        print(
+            f"Playing gif {file} on {wled_host} for {duration_seconds}s at {fps}fps (background thread)"
         )
+        t = threading.Thread(
+            target=play_gif_for_specified_time,
+            args=(float(duration_seconds) * 1000, file, float(fps), wled_host),
+            daemon=True,
+        )
+        t.start()
     except Exception as e:
-        print(f"Error playing gif: {e}")
-        return jsonify({"status": "Fail", "message": "Error playing gif"}), 500
+        print(f"Error starting background thread: {e}")
+        return (
+            jsonify({"status": "Fail", "message": "Error starting background thread"}),
+            500,
+        )
 
-    return jsonify({"status": "OK"}), 200
+    return jsonify({"status": "OK", "message": "Playback started in background"}), 200
 
 
 if __name__ == "__main__":
